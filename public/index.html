@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>补习中心综合管理系统 (Firebase Serverless)</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 顶部导航栏 (Navbar) -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-3" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%) !important;">
+    <div class="container-fluid px-3 px-md-4">
+      <a class="navbar-brand d-flex align-items-center me-3" href="#">
+        <div class="brand-icon me-2">
+          <i class="bi bi-mortarboard-fill text-warning fs-4"></i>
+        </div>
+        <div>
+          <span class="fw-bold fs-5 text-white">智学补习中心管理系统</span>
+          <span class="d-block text-white-50" style="font-size: 0.75rem; letter-spacing: 1px;">FIREBASE SERVERLESS EDITION</span>
+        </div>
+      </a>
+
+      <div class="d-none d-md-block">
+        <span id="firebaseModeBadge" class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2">
+          <i class="bi bi-cloud-check-fill me-1"></i> Firebase Realtime Sync
+        </span>
+      </div>
+
+      <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="nav nav-tabs border-0 ms-auto mt-3 mt-lg-0" id="mainTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-panel" type="button" role="tab">
+              <i class="bi bi-speedometer2 me-1"></i> 仪表盘概览
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="students-tab" data-bs-toggle="tab" data-bs-target="#students-panel" type="button" role="tab">
+              <i class="bi bi-people-fill me-1"></i> 学生信息管理
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance-panel" type="button" role="tab">
+              <i class="bi bi-clipboard-check-fill me-1"></i> 课堂点名与考勤
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments-panel" type="button" role="tab">
+              <i class="bi bi-receipt-cutoff me-1"></i> 学费管理与收据
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="materials-tab" data-bs-toggle="tab" data-bs-target="#materials-panel" type="button" role="tab">
+              <i class="bi bi-journal-bookmark-fill me-1"></i> 教材资料库
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="notices-tab" data-bs-toggle="tab" data-bs-target="#notices-panel" type="button" role="tab">
+              <i class="bi bi-megaphone-fill me-1"></i> 通知控制台
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 主内容区域 Container -->
+  <main class="container-fluid px-3 px-md-4 py-4">
+
+    <!-- 全局操作提示 Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+      <div id="appToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body fs-6" id="toastMessage">操作结果提示</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="mainTabContent">
+
+      <!-- ============================================================ -->
+      <!-- TAB 1: 仪表盘概览 (Dashboard Panel) -->
+      <!-- ============================================================ -->
+      <div class="tab-pane fade show active" id="dashboard-panel" role="tabpanel">
+        
+        <!-- 核心指标卡片 -->
+        <div class="row g-3 g-md-4 mb-4">
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card stat-card border-0 bg-white">
+              <div class="card-body d-flex align-items-center">
+                <div class="icon-wrapper bg-primary bg-opacity-10 text-primary me-3">
+                  <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                  <div class="text-muted small fw-semibold">在读学生总数</div>
+                  <h3 class="fw-bold mb-0 text-dark" id="statTotalStudents">0</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card stat-card border-0 bg-white">
+              <div class="card-body d-flex align-items-center">
+                <div class="icon-wrapper bg-success bg-opacity-10 text-success me-3">
+                  <i class="bi bi-cash-stack"></i>
+                </div>
+                <div>
+                  <div class="text-muted small fw-semibold">本月已到账学费 (RM)</div>
+                  <h3 class="fw-bold mb-0 text-dark"><span id="statPaidAmount">RM 0.00</span></h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card stat-card border-0 bg-white">
+              <div class="card-body d-flex align-items-center">
+                <div class="icon-wrapper bg-warning bg-opacity-10 text-warning me-3">
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div>
+                  <div class="text-muted small fw-semibold">待缴学费账单</div>
+                  <h3 class="fw-bold mb-0 text-dark"><span id="statUnpaidCount">0</span> 笔</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card stat-card border-0 bg-white">
+              <div class="card-body d-flex align-items-center">
+                <div class="icon-wrapper bg-info bg-opacity-10 text-info me-3">
+                  <i class="bi bi-book-half"></i>
+                </div>
+                <div>
+                  <div class="text-muted small fw-semibold">开设课程班级</div>
+                  <h3 class="fw-bold mb-0 text-dark"><span id="statTotalClasses">0</span> 个</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 快捷入口与表单 -->
+        <div class="row g-4">
+          <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4">
+              <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-bell-fill text-primary me-2"></i>最新学费动向 (RM 计价)</h5>
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="TuitionFirebaseApp.switchTab('payments-tab')">查看全部</button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>学生</th>
+                        <th>课程科目</th>
+                        <th>月份</th>
+                        <th>学费金额 (RM)</th>
+                        <th>状态</th>
+                        <th>收据单号</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dashboardRecentPaymentsTable">
+                      <tr><td colspan="6" class="text-center py-4 text-muted">加载中...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
+              <div class="card-body p-3 p-md-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>快捷常用操作</h5>
+                <div class="d-grid gap-2">
+                  <button class="btn btn-primary btn-lg rounded-3 d-flex align-items-center justify-content-between py-2 px-3" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                    <span><i class="bi bi-person-plus-fill me-2"></i>录入新学生</span>
+                    <i class="bi bi-chevron-right fs-6"></i>
+                  </button>
+                  <button class="btn btn-outline-success btn-lg rounded-3 d-flex align-items-center justify-content-between py-2 px-3" onclick="TuitionFirebaseApp.switchTab('attendance-tab')">
+                    <span><i class="bi bi-card-checklist me-2"></i>开始课堂点名</span>
+                    <i class="bi bi-chevron-right fs-6"></i>
+                  </button>
+                  <button class="btn btn-outline-primary btn-lg rounded-3 d-flex align-items-center justify-content-between py-2 px-3" data-bs-toggle="modal" data-bs-target="#createPaymentModal">
+                    <span><i class="bi bi-file-earmark-plus-fill me-2"></i>创建每月应缴账单</span>
+                    <i class="bi bi-chevron-right fs-6"></i>
+                  </button>
+                  <button class="btn btn-outline-dark btn-lg rounded-3 d-flex align-items-center justify-content-between py-2 px-3" data-bs-toggle="modal" data-bs-target="#addClassModal">
+                    <span><i class="bi bi-plus-square-fill me-2"></i>新建班级课程</span>
+                    <i class="bi bi-chevron-right fs-6"></i>
+                  </button>
+                  <button class="btn btn-outline-info btn-lg rounded-3 d-flex align-items-center justify-content-between py-2 px-3" onclick="TuitionFirebaseApp.switchTab('notices-tab')">
+                    <span><i class="bi bi-megaphone-fill me-2"></i>通知控制台 (WhatsApp)</span>
+                    <i class="bi bi-chevron-right fs-6"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 text-white" style="background: linear-gradient(135deg, #065f46 0%, #047857 100%);">
+              <div class="card-body p-4">
+                <h6 class="fw-bold mb-2 text-warning"><i class="bi bi-shield-check me-2"></i>Firebase v10 Serverless 模式</h6>
+                <p class="small opacity-90 mb-0">本系统已升级为纯前端无服务器架构：全量学费统一采用马来西亚令吉 (RM) 格式化，支持导出标明 (RM) 的 Excel 汇总报表。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 2: 学生信息管理 (Students Panel) -->
+      <!-- ============================================================ -->
+      <div class="tab-pane fade" id="students-panel" role="tabpanel">
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white py-3 border-0">
+            <div class="row g-3 align-items-center justify-content-between">
+              <div class="col-12 col-md-auto">
+                <h5 class="fw-bold mb-0"><i class="bi bi-people-fill text-primary me-2"></i>Firestore 在读学生档案管理</h5>
+              </div>
+              <div class="col-12 col-md-auto">
+                <div class="row g-2 align-items-center">
+                  <div class="col-12 col-sm-auto">
+                    <input type="text" id="searchStudentInput" class="form-control form-control-sm rounded-pill px-3" placeholder="搜索姓名 / 学号 / 电话">
+                  </div>
+                  <div class="col-12 col-sm-auto">
+                    <select id="filterStudentGrade" class="form-select form-select-sm rounded-pill px-3">
+                      <option value="">所有年级</option>
+                      <option value="初中一年级">初中一年级</option>
+                      <option value="初中二年级">初中二年级</option>
+                      <option value="初中三年级">初中三年级</option>
+                      <option value="高中一年级">高中一年级</option>
+                      <option value="高中二年级">高中二年级</option>
+                      <option value="高中三年级">高中三年级</option>
+                    </select>
+                  </div>
+                  <div class="col-12 col-sm-auto">
+                    <select id="filterStudentSubject" class="form-select form-select-sm rounded-pill px-3">
+                      <option value="">所有报读科目</option>
+                    </select>
+                  </div>
+                  <div class="col-12 col-sm-auto">
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-3 w-100" onclick="TuitionFirebaseApp.exportStudentsToCSV()">
+                      <i class="bi bi-file-earmark-spreadsheet me-1"></i> 导出花名册 (RM)
+                    </button>
+                  </div>
+                  <div class="col-12 col-sm-auto">
+                    <button class="btn btn-sm btn-success rounded-pill px-3 w-100" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                      <i class="bi bi-plus-lg me-1"></i> 添加学生
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>学号</th>
+                    <th>学生姓名</th>
+                    <th>性别</th>
+                    <th>年级</th>
+                    <th>报读科目</th>
+                    <th>预估学费 (RM)</th>
+                    <th>学生电话</th>
+                    <th>家长姓名</th>
+                    <th>家长联系电话</th>
+                    <th>在读状态</th>
+                    <th class="text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="studentsTableBody">
+                  <tr><td colspan="11" class="text-center py-4 text-muted">数据加载中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 3: 课堂点名与考勤 (Attendance Panel) -->
+      <!-- ============================================================ -->
+      <div class="tab-pane fade" id="attendance-panel" role="tabpanel">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+          <div class="card-body py-3">
+            <div class="row g-3 align-items-center">
+              <div class="col-12 col-md-4">
+                <label class="form-label fw-semibold mb-1"><i class="bi bi-book-half text-primary me-1"></i>选择点名科目 (Select Subject):</label>
+                <select id="attendanceSubjectSelect" class="form-select rounded-3" onchange="TuitionFirebaseApp.loadAttendanceRollCall()">
+                  <option value="">-- 请选择点名科目 (Select Subject) --</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-3">
+                <label class="form-label fw-semibold mb-1"><i class="bi bi-calendar-event text-primary me-1"></i>点名日期:</label>
+                <input type="date" id="attendanceDatePicker" class="form-control rounded-3" onchange="TuitionFirebaseApp.loadAttendanceRollCall()">
+              </div>
+              <div class="col-12 col-md-5 d-flex flex-wrap align-items-end gap-2 mt-md-4">
+                <button class="btn btn-primary rounded-3 px-3 flex-fill flex-sm-grow-0" onclick="TuitionFirebaseApp.loadAttendanceRollCall()">
+                  <i class="bi bi-arrow-repeat me-1"></i> 加载名册
+                </button>
+                <button class="btn btn-success rounded-3 px-3 flex-fill flex-sm-grow-0" onclick="TuitionFirebaseApp.setAllAttendancePresent()">
+                  <i class="bi bi-check-all me-1"></i> 一键出席
+                </button>
+                <button class="btn btn-indigo rounded-3 px-3 flex-fill flex-sm-grow-0 ms-auto bg-primary text-white" onclick="TuitionFirebaseApp.submitBatchAttendance()">
+                  <i class="bi bi-save-fill me-1"></i> 批量提交 (writeBatch)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-check2-square text-success me-2"></i>课堂考勤与评价名册表</h5>
+              <span class="text-muted small" id="attendanceAudienceSummary"><i class="bi bi-info-circle me-1"></i>请先在上方选择科目，系统将自动联动仅展示已报读该科目的学员</span>
+            </div>
+            <span class="badge bg-slate-100 text-slate-700 border px-3 py-2" id="attendanceStudentCountBadge">
+              <i class="bi bi-people me-1"></i> 名册学员: 0 人
+            </span>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>学号</th>
+                    <th>学生姓名</th>
+                    <th>年级</th>
+                    <th>报读科目</th>
+                    <th>考勤状态</th>
+                    <th>课堂评价评语 (快捷标签)</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                  <tr><td colspan="6" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i>请先在上方选择点名科目并加载点名名册</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 4: 学费管理与电子收据 (Payments Panel) -->
+      <!-- ============================================================ -->
+      <div class="tab-pane fade" id="payments-panel" role="tabpanel">
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white py-3 border-0">
+            <div class="row g-3 align-items-center justify-content-between">
+              <div class="col-12 col-md-auto">
+                <h5 class="fw-bold mb-0"><i class="bi bi-currency-exchange text-success me-2"></i>Firestore 缴费记录与收据 (RM)</h5>
+              </div>
+              <div class="col-12 col-md-auto">
+                <div class="row g-2 align-items-center">
+                  <div class="col-12 col-sm-auto">
+                    <input type="month" id="filterPaymentMonth" class="form-control form-control-sm rounded-pill px-3">
+                  </div>
+                  <div class="col-12 col-sm-auto">
+                    <select id="filterPaymentStatus" class="form-select form-select-sm rounded-pill px-3">
+                      <option value="">全部支付状态</option>
+                      <option value="Paid">已缴费 (Paid)</option>
+                      <option value="Unpaid">待缴费 (Unpaid)</option>
+                      <option value="Overdue">已逾期 (Overdue)</option>
+                    </select>
+                  </div>
+                  <div class="col-12 col-sm-auto">
+                    <input type="text" id="searchPaymentInput" class="form-control form-control-sm rounded-pill px-3" placeholder="搜索学生姓名 / 收据号">
+                  </div>
+                  <div class="col-12 col-sm-auto">
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-3 w-100" onclick="TuitionFirebaseApp.exportPaymentsToCSV()">
+                      <i class="bi bi-file-earmark-excel me-1"></i> 导出 Excel 报表 (RM)
+                    </button>
+                  </div>
+                  <div class="col-12 col-sm-auto">
+                    <button class="btn btn-sm btn-success rounded-pill px-3 w-100" data-bs-toggle="modal" data-bs-target="#createPaymentModal">
+                      <i class="bi bi-plus-lg me-1"></i> 创建账单
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Doc ID</th>
+                    <th>学生姓名</th>
+                    <th>关联班级/科目</th>
+                    <th>账单月份</th>
+                    <th>学费金额 (RM)</th>
+                    <th>支付状态</th>
+                    <th>电子收据单号</th>
+                    <th>更新时间</th>
+                    <th class="text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsTableBody">
+                  <tr><td colspan="9" class="text-center py-4 text-muted">数据加载中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 5: 教材资料库 (Materials Panel) -->
+      <!-- ============================================================ -->
+      <div class="tab-pane fade" id="materials-panel" role="tabpanel">
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white py-3 border-0 d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <h5 class="fw-bold mb-0"><i class="bi bi-journal-check text-info me-2"></i>补习教材与考题资料库</h5>
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-sm btn-success rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
+                <i class="bi bi-upload me-1"></i> 上传新资料
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>ID</th>
+                    <th>资料标题</th>
+                    <th>科目</th>
+                    <th>分类</th>
+                    <th>适用班级</th>
+                    <th>文件链接</th>
+                    <th>上传时间</th>
+                    <th class="text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="materialsTableBody">
+                  <tr><td colspan="8" class="text-center py-4 text-muted">数据加载中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- TAB 6: 后台通知控制台 (Admin Notice Console) -->
+      <!-- ============================================================ -->
+      <div class="tab-pane fade" id="notices-panel" role="tabpanel">
+        <div class="row g-4">
+          <!-- 左侧：通知创建与编辑器 -->
+          <div class="col-12 col-xl-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+              <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                  <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-megaphone-fill text-primary me-2"></i>后台通知控制台 (Admin Notice Console)</h5>
+                  <span class="text-muted small">支持全中心广播、年级科目筛选或单发通知，一键 WhatsApp 直达及归档</span>
+                </div>
+                <span class="badge bg-slate-100 text-slate-700 border px-3 py-2">
+                  <i class="bi bi-broadcast me-1"></i> 家校直通中心
+                </span>
+              </div>
+
+              <div class="card-body p-3 p-md-4">
+                <form id="noticeComposerForm" onsubmit="event.preventDefault()">
+                  <!-- 1. 接收对象 (Target Audience) -->
+                  <div class="mb-4">
+                    <label class="form-label fw-bold text-dark mb-2 d-flex justify-content-between align-items-center">
+                      <span><i class="bi bi-people-fill text-primary me-1"></i> 1. 接收对象 (Target Audience)</span>
+                      <span id="noticeAudienceCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                        匹配受众: 0 人
+                      </span>
+                    </label>
+
+                    <div class="row g-2 mb-3">
+                      <div class="col-12 col-sm-4">
+                        <input type="radio" class="btn-check" name="noticeTargetType" id="targetAll" value="all" checked onchange="TuitionFirebaseApp.onNoticeTargetTypeChange()">
+                        <label class="btn btn-outline-secondary w-100 py-2 d-flex align-items-center justify-content-center" for="targetAll">
+                          <i class="bi bi-globe2 me-2"></i>全中心广播
+                        </label>
+                      </div>
+                      <div class="col-12 col-sm-4">
+                        <input type="radio" class="btn-check" name="noticeTargetType" id="targetFilter" value="filter" onchange="TuitionFirebaseApp.onNoticeTargetTypeChange()">
+                        <label class="btn btn-outline-secondary w-100 py-2 d-flex align-items-center justify-content-center" for="targetFilter">
+                          <i class="bi bi-funnel-fill me-2"></i>按年级/科目筛选
+                        </label>
+                      </div>
+                      <div class="col-12 col-sm-4">
+                        <input type="radio" class="btn-check" name="noticeTargetType" id="targetSingle" value="single" onchange="TuitionFirebaseApp.onNoticeTargetTypeChange()">
+                        <label class="btn btn-outline-secondary w-100 py-2 d-flex align-items-center justify-content-center" for="targetSingle">
+                          <i class="bi bi-person-fill me-2"></i>指定单个学员
+                        </label>
+                      </div>
+                    </div>
+
+                    <!-- 筛选子项：年级/科目 -->
+                    <div id="noticeFilterControls" class="p-3 bg-slate-50 border rounded-3 d-none mb-3">
+                      <div class="row g-3">
+                        <div class="col-12 col-sm-6">
+                          <label class="form-label small fw-semibold text-muted mb-1">目标年级:</label>
+                          <select id="noticeFilterGrade" class="form-select form-select-sm" onchange="TuitionFirebaseApp.updateNoticeAudience()">
+                            <option value="">所有年级</option>
+                            <option value="初中一年级">初中一年级</option>
+                            <option value="初中二年级">初中二年级</option>
+                            <option value="初中三年级">初中三年级</option>
+                            <option value="高中一年级">高中一年级</option>
+                            <option value="高中二年级">高中二年级</option>
+                            <option value="高中三年级">高中三年级</option>
+                          </select>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                          <label class="form-label small fw-semibold text-muted mb-1">报读科目:</label>
+                          <select id="noticeFilterSubject" class="form-select form-select-sm" onchange="TuitionFirebaseApp.updateNoticeAudience()">
+                            <option value="">所有科目</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 指定单个学员下拉框 -->
+                    <div id="noticeSingleControls" class="p-3 bg-slate-50 border rounded-3 d-none mb-3">
+                      <label class="form-label small fw-semibold text-muted mb-1">选择指定学员:</label>
+                      <select id="noticeStudentSelect" class="form-select" onchange="TuitionFirebaseApp.onNoticeStudentSelected()">
+                        <option value="">-- 请选择学员 --</option>
+                      </select>
+                      <div id="noticeStudentDetailInfo" class="mt-2 small text-muted d-none"></div>
+                    </div>
+                  </div>
+
+                  <!-- 2. 模板选择 (Template Selection) -->
+                  <div class="mb-4">
+                    <label class="form-label fw-bold text-dark mb-2">
+                      <i class="bi bi-file-earmark-text-fill text-primary me-1"></i> 2. 消息模板选择 (Notice Template)
+                    </label>
+                    <select id="noticeTemplateSelect" class="form-select rounded-3 mb-2" onchange="TuitionFirebaseApp.applyNoticeTemplate()">
+                      <option value="monthly_fee">【每月学费提醒】(Monthly Fee Reminder)</option>
+                      <option value="overdue_fee">【逾期催缴】(Overdue Payment Notice)</option>
+                      <option value="holiday">【假期停课】(Holiday Notice)</option>
+                      <option value="reschedule">【临时调课】(Class Reschedule Notice)</option>
+                      <option value="exam">【考试安排】(Exam Schedule Notice)</option>
+                      <option value="feedback">【一对一课堂反馈】(1-on-1 Class Feedback)</option>
+                    </select>
+
+                    <!-- 动态变量标签快捷插入按钮 -->
+                    <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
+                      <span class="small text-muted me-1">点击插入变量:</span>
+                      <button type="button" class="btn btn-sm btn-light border py-1 px-2 small rounded-pill" onclick="TuitionFirebaseApp.insertVariableToNotice('{student_name}')">{student_name}</button>
+                      <button type="button" class="btn btn-sm btn-light border py-1 px-2 small rounded-pill" onclick="TuitionFirebaseApp.insertVariableToNotice('{parent_name}')">{parent_name}</button>
+                      <button type="button" class="btn btn-sm btn-light border py-1 px-2 small rounded-pill" onclick="TuitionFirebaseApp.insertVariableToNotice('{grade}')">{grade}</button>
+                      <button type="button" class="btn btn-sm btn-light border py-1 px-2 small rounded-pill" onclick="TuitionFirebaseApp.insertVariableToNotice('{subjects}')">{subjects}</button>
+                      <button type="button" class="btn btn-sm btn-light border py-1 px-2 small rounded-pill" onclick="TuitionFirebaseApp.insertVariableToNotice('{fee_amount}')">{fee_amount}</button>
+                      <button type="button" class="btn btn-sm btn-light border py-1 px-2 small rounded-pill" onclick="TuitionFirebaseApp.insertVariableToNotice('{month}')">{month}</button>
+                      <button type="button" class="btn btn-sm btn-light border py-1 px-2 small rounded-pill" onclick="TuitionFirebaseApp.insertVariableToNotice('{centre_name}')">{centre_name}</button>
+                    </div>
+                  </div>
+
+                  <!-- 3. 通知标题 -->
+                  <div class="mb-3">
+                    <label class="form-label fw-bold text-dark mb-1">
+                      <i class="bi bi-tag-fill text-primary me-1"></i> 通知标题 (Notice Title)
+                    </label>
+                    <input type="text" id="noticeTitleInput" class="form-control rounded-3" placeholder="输入通知标题...">
+                  </div>
+
+                  <!-- 4. 通知正文 -->
+                  <div class="mb-3">
+                    <label class="form-label fw-bold text-dark mb-1 d-flex justify-content-between align-items-center">
+                      <span><i class="bi bi-pencil-square text-primary me-1"></i> 通知正文 (Message Content)</span>
+                      <span class="small text-muted" id="noticeCharCount">0 字符</span>
+                    </label>
+                    <textarea id="noticeContentInput" class="form-control rounded-3 font-monospace" rows="8" placeholder="在此编辑通知正文，支持动态替换变量..."></textarea>
+                  </div>
+
+                  <!-- 5. 动作按钮组 (Action Buttons) -->
+                  <div class="d-flex flex-wrap align-items-center gap-2 pt-2 border-top">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 flex-fill flex-sm-grow-0" onclick="TuitionFirebaseApp.copyNoticeContent()">
+                      <i class="bi bi-clipboard me-1"></i> 复制文本
+                    </button>
+                    <button type="button" class="btn btn-whatsapp rounded-3 px-4 py-2 flex-fill flex-sm-grow-0" onclick="TuitionFirebaseApp.sendNoticeViaWhatsApp()">
+                      <i class="bi bi-whatsapp me-1"></i> WhatsApp 直达
+                    </button>
+                    <button type="button" class="btn btn-primary rounded-3 px-4 py-2 flex-fill flex-sm-grow-0 ms-sm-auto" onclick="TuitionFirebaseApp.saveNoticeRecord()">
+                      <i class="bi bi-send me-1"></i> 保存至历史记录
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧：受众即时清单与通知发送历史 -->
+          <div class="col-12 col-xl-5">
+            <!-- 实时受众预览清单 -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+              <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                  <i class="bi bi-person-lines-fill text-primary me-2"></i>当前匹配接收学员 (<span id="noticeAudienceCount">0</span>)
+                </h6>
+                <span class="small text-muted">点击可直接 WhatsApp 发送</span>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 230px; overflow-y: auto;">
+                  <table class="table table-hover align-middle mb-0 table-sm">
+                    <thead class="table-light sticky-top">
+                      <tr>
+                        <th>学生姓名</th>
+                        <th>年级</th>
+                        <th>家长电话</th>
+                        <th class="text-end">快捷直达</th>
+                      </tr>
+                    </thead>
+                    <tbody id="noticeAudiencePreviewTable">
+                      <tr><td colspan="4" class="text-center py-3 text-muted">正在检索受众数据...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- 通知发送历史记录卡片 -->
+            <div class="card border-0 shadow-sm rounded-4">
+              <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark">
+                  <i class="bi bi-clock-history text-secondary me-2"></i>发送与归档历史 (Notice History)
+                </h6>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-2" onclick="TuitionFirebaseApp.clearAllNoticesConfirm()">
+                  <i class="bi bi-trash me-1"></i>清空历史
+                </button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                  <table class="table table-hover align-middle mb-0 table-sm">
+                    <thead class="table-light sticky-top">
+                      <tr>
+                        <th>时间</th>
+                        <th>类型</th>
+                        <th>接收对象</th>
+                        <th class="text-end">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="noticeHistoryTableBody">
+                      <tr><td colspan="4" class="text-center py-3 text-muted">暂无历史通知记录</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ============================================================ -->
+  <!-- 模态框集合 (Modals) -->
+  <!-- ============================================================ -->
+
+  <!-- 1. 添加学生 Modal (支持报读科目多选与学费自动计算) -->
+  <div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-primary text-white py-3">
+          <h5 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2"></i>录入新学生信息 (Firestore)</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="addStudentForm" onsubmit="TuitionFirebaseApp.submitAddStudent(event)">
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">学生学号</label>
+                <input type="text" id="newStudentCode" class="form-control" placeholder="例: STU2026008">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">学生姓名 *</label>
+                <input type="text" id="newStudentName" class="form-control" required placeholder="如: 张小明">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">性别</label>
+                <select id="newStudentGender" class="form-select">
+                  <option value="Male">男 (Male)</option>
+                  <option value="Female">女 (Female)</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">在读年级 *</label>
+                <select id="newStudentGrade" class="form-select" required>
+                  <option value="初中一年级">初中一年级</option>
+                  <option value="初中二年级">初中二年级</option>
+                  <option value="初中三年级">初中三年级</option>
+                  <option value="高中一年级">高中一年级</option>
+                  <option value="高中二年级" selected>高中二年级</option>
+                  <option value="高中三年级">高中三年级</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">学生联系电话</label>
+                <input type="text" id="newStudentPhone" class="form-control" placeholder="6012xxxxxxxx">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">家长姓名</label>
+                <input type="text" id="newStudentParentName" class="form-control" placeholder="如: 张伟">
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">家长联系电话 *</label>
+                <input type="text" id="newStudentParentPhone" class="form-control" required placeholder="例: 60123456789 (用于 WhatsApp 通知与紧急联系)">
+              </div>
+
+              <!-- 报读科目多选区域 (由 TuitionFirebaseApp.renderAddStudentSubjectCheckboxes() 动态渲染) -->
+              <div class="col-12">
+                <label class="form-label fw-semibold d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                  <span><i class="bi bi-book-half text-primary me-1"></i>报读科目 (多选，自动计算学费) *</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-slate-100 text-slate-700 border">每门科目标准学费: RM 80.00</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" onclick="TuitionFirebaseApp.promptAddNewSubject()" title="快捷增加新科目">
+                      <i class="bi bi-plus-lg me-1"></i>新增科目
+                    </button>
+                  </div>
+                </label>
+                <div class="p-3 bg-slate-50 rounded-3 border">
+                  <div class="row g-2" id="subjectCheckboxContainer">
+                    <!-- 动态渲染科目卡片 -->
+                  </div>
+
+                  <div class="mt-3 pt-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted">
+                      已选科目: <strong id="selectedSubjectsCount" class="text-dark">0</strong> 门
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="small text-muted">预估每月学费:</span>
+                      <strong class="fs-5 text-primary" id="calculatedFeeDisplay">RM 0.00</strong>
+                    </div>
+                  </div>
+                  <input type="hidden" id="newStudentCalculatedFee" value="0.00">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light py-2">
+            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4">保存至 Firestore</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.2 编辑学生 Modal (Edit Student Modal) -->
+  <div class="modal fade" id="editStudentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-slate-900 text-white py-3">
+          <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>编辑学员档案与报读科目</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="editStudentForm" onsubmit="TuitionFirebaseApp.submitEditStudent(event)">
+          <input type="hidden" id="editStudentDocId">
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">学生学号</label>
+                <input type="text" id="editStudentCode" class="form-control" readonly>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">学生姓名 *</label>
+                <input type="text" id="editStudentName" class="form-control" required placeholder="如: 张小明">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">性别</label>
+                <select id="editStudentGender" class="form-select">
+                  <option value="Male">男 (Male)</option>
+                  <option value="Female">女 (Female)</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">在读年级 *</label>
+                <select id="editStudentGrade" class="form-select" required>
+                  <option value="初中一年级">初中一年级</option>
+                  <option value="初中二年级">初中二年级</option>
+                  <option value="初中三年级">初中三年级</option>
+                  <option value="高中一年级">高中一年级</option>
+                  <option value="高中二年级">高中二年级</option>
+                  <option value="高中三年级">高中三年级</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">学生联系电话</label>
+                <input type="text" id="editStudentPhone" class="form-control" placeholder="6012xxxxxxxx">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">家长姓名</label>
+                <input type="text" id="editStudentParentName" class="form-control" placeholder="如: 张伟">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">家长联系电话 *</label>
+                <input type="text" id="editStudentParentPhone" class="form-control" required placeholder="例: 60123456789">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">在学状态</label>
+                <select id="editStudentStatus" class="form-select">
+                  <option value="Active">在读 (Active)</option>
+                  <option value="Inactive">离校 (Inactive)</option>
+                </select>
+              </div>
+
+              <!-- 报读科目多选区域 -->
+              <div class="col-12">
+                <label class="form-label fw-semibold d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                  <span><i class="bi bi-book-half text-primary me-1"></i>报读科目调整 (自动联动学费) *</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-slate-100 text-slate-700 border">每门科目标准学费: RM 80.00</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" onclick="TuitionFirebaseApp.promptAddNewSubject()" title="快捷增加新科目">
+                      <i class="bi bi-plus-lg me-1"></i>新增科目
+                    </button>
+                  </div>
+                </label>
+                <div class="p-3 bg-slate-50 rounded-3 border">
+                  <div class="row g-2" id="editSubjectCheckboxContainer">
+                    <!-- 动态渲染科目卡片 -->
+                  </div>
+
+                  <div class="mt-3 pt-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted">
+                      已选科目: <strong id="editSelectedSubjectsCount" class="text-dark">0</strong> 门
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="small text-muted">预估每月学费:</span>
+                      <strong class="fs-5 text-primary" id="editCalculatedFeeDisplay">RM 0.00</strong>
+                    </div>
+                  </div>
+                  <input type="hidden" id="editStudentCalculatedFee" value="0.00">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light py-2">
+            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4">保存修改</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. 查看通知历史详情 Modal -->
+  <div class="modal fade" id="noticeDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-dark text-white py-3">
+          <h5 class="modal-title fw-bold"><i class="bi bi-file-text me-2"></i>通知详情与操作</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <span class="badge bg-primary-subtle text-primary" id="detailNoticeType">--</span>
+            <span class="text-muted small ms-2" id="detailNoticeTime">--</span>
+          </div>
+          <h5 class="fw-bold text-dark" id="detailNoticeTitle">--</h5>
+          <div class="small text-muted mb-2">接收对象: <strong class="text-dark" id="detailNoticeTarget">--</strong></div>
+          <div class="p-3 bg-slate-50 border rounded-3 font-monospace small mb-3" style="white-space: pre-wrap;" id="detailNoticeContent">--</div>
+        </div>
+        <div class="modal-footer bg-light py-2">
+          <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-outline-primary rounded-pill px-3" id="detailCopyBtn">
+            <i class="bi bi-clipboard me-1"></i>复制正文
+          </button>
+          <button type="button" class="btn btn-whatsapp rounded-pill px-3" id="detailWhatsAppBtn">
+            <i class="bi bi-whatsapp me-1"></i>WhatsApp 发送
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 新建班级 Modal -->
+  <div class="modal fade" id="addClassModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-dark text-white py-3">
+          <h5 class="modal-title fw-bold"><i class="bi bi-journal-plus me-2"></i>开设新课程班级</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="addClassForm" onsubmit="TuitionFirebaseApp.submitAddClass(event)">
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label fw-semibold">班级名称 *</label>
+                <input type="text" id="newClassName" class="form-control" required placeholder="如: 高二数学拔尖冲刺班">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">科目 *</label>
+                <input type="text" id="newClassSubject" class="form-control" list="existingSubjectsDatalist" required placeholder="如: 数学 / 英语 / 物理">
+                <datalist id="existingSubjectsDatalist"></datalist>
+                <div class="form-text small text-muted">可直接输入全新科目名称，开设后将实时同步至全系统</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">适用年级</label>
+                <input type="text" id="newClassGrade" class="form-control" placeholder="如: 高中二年级">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">任课教师</label>
+                <input type="text" id="newClassTeacher" class="form-control" placeholder="如: 林老师">
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">每月学费 (RM) *</label>
+                <input type="number" step="0.01" id="newClassFee" class="form-control" required placeholder="250.00">
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">上课安排</label>
+                <input type="text" id="newClassSchedule" class="form-control" placeholder="例: 周六 09:00-11:30">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light py-2">
+            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-dark rounded-pill px-4">创建班级</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 创建学费账单 Modal -->
+  <div class="modal fade" id="createPaymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-success text-white py-3">
+          <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-plus me-2"></i>生成学费账单</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="createPaymentForm" onsubmit="TuitionFirebaseApp.submitCreatePaymentBill(event)">
+          <div class="modal-body p-4">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">选择学生 *</label>
+              <select id="billStudentSelect" class="form-select" required>
+                <option value="">-- 请选择学生 --</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">关联班级课程</label>
+              <select id="billClassSelect" class="form-select">
+                <option value="">-- 选择班级 (自动读取标准学费) --</option>
+              </select>
+            </div>
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">账单月份 *</label>
+                <input type="month" id="billMonthYear" class="form-control" required>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">学费金额 (RM) *</label>
+                <input type="number" step="0.01" id="billAmount" class="form-control" required placeholder="250.00">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light py-2">
+            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-success rounded-pill px-4">发布账单</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 更新学费状态 Modal -->
+  <div class="modal fade" id="updatePaymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-primary text-white py-3">
+          <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>变更学费支付状态</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="updatePaymentForm" onsubmit="TuitionFirebaseApp.submitUpdatePaymentStatus(event)">
+          <input type="hidden" id="editPaymentId">
+          <div class="modal-body p-4">
+            <div class="mb-3 bg-light p-3 rounded-3">
+              <div class="small text-muted">学生姓名: <strong id="editPaymentStudentName" class="text-dark">--</strong></div>
+              <div class="small text-muted">账单月份: <strong id="editPaymentMonth" class="text-dark">--</strong></div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">支付状态 *</label>
+              <select id="editPaymentStatus" class="form-select">
+                <option value="Paid">已缴费 (Paid - 自动生成收据编号)</option>
+                <option value="Unpaid">未缴费 (Unpaid)</option>
+                <option value="Overdue">已逾期 (Overdue)</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">实缴/账单金额 (RM)</label>
+              <input type="number" step="0.01" id="editPaymentAmount" class="form-control" required>
+            </div>
+
+            <div class="alert alert-info py-2 small mb-0">
+              <i class="bi bi-info-circle-fill me-1"></i> 当状态设为 <strong>已缴费 (Paid)</strong> 时，Firestore 将自动保存并生成 <code>RCP-YYYYMMDD-XXXX</code> 电子收据。
+            </div>
+          </div>
+          <div class="modal-footer bg-light py-2">
+            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4">确认保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 电子收据 Modal (Printable E-Receipt) -->
+  <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-dark text-white py-3">
+          <h5 class="modal-title fw-bold"><i class="bi bi-printer-fill me-2"></i>补习中心官方学费电子收据凭证</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="receipt-paper position-relative" id="printableReceipt">
+            <div class="receipt-watermark">PAID OFFICIAL</div>
+            
+            <div class="receipt-header d-flex justify-content-between align-items-center">
+              <div>
+                <h3 class="fw-bold text-dark mb-1">智学补习中心</h3>
+                <span class="text-muted small">Zhixue Tuition Centre Official Fee Receipt</span>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-success fs-6 px-3 py-2"><i class="bi bi-check-circle-fill me-1"></i>已完成缴费 (Paid)</span>
+                <div class="mt-2 text-muted small">收据编号: <strong class="text-dark" id="rcpNumber">RCP-00000000-0000</strong></div>
+              </div>
+            </div>
+
+            <div class="row g-3 my-2">
+              <div class="col-6">
+                <div class="text-muted small">学生姓名:</div>
+                <div class="fw-bold fs-5 text-dark" id="rcpStudentName">--</div>
+              </div>
+              <div class="col-6 text-end">
+                <div class="text-muted small">学号:</div>
+                <div class="fw-bold fs-5 text-dark" id="rcpStudentCode">--</div>
+              </div>
+              <div class="col-6">
+                <div class="text-muted small">班级/科目:</div>
+                <div class="fw-semibold text-dark" id="rcpClassName">--</div>
+              </div>
+              <div class="col-6 text-end">
+                <div class="text-muted small">家长联系电话:</div>
+                <div class="fw-semibold text-dark" id="rcpParentPhone">--</div>
+              </div>
+            </div>
+
+            <div class="table-responsive my-4">
+              <table class="table table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>收费项目 description</th>
+                    <th>账单月份 Month</th>
+                    <th class="text-end">付款金额 Amount (RM)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td id="rcpSubjectDesc">补习课程学费</td>
+                    <td id="rcpMonthYear">2026-10</td>
+                    <td class="text-end fw-bold text-primary fs-5" id="rcpAmount">RM 0.00</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-end pt-3 border-top">
+              <div>
+                <div class="text-muted small">付款时间: <span id="rcpPaymentDate" class="text-dark">--</span></div>
+                <div class="text-muted small">经办机构: 智学补习中心财务处</div>
+              </div>
+              <div class="text-end">
+                <div class="text-muted small mb-3">盖章/签发人:</div>
+                <div class="fw-bold border-bottom border-dark pb-1 px-4 d-inline-block">财务专用章</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light py-2">
+          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-primary rounded-pill px-4" onclick="TuitionFirebaseApp.printReceipt()">
+            <i class="bi bi-printer me-1"></i> 立即打印电子收据
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 上传资料 Modal -->
+  <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-info text-white py-3">
+          <h5 class="modal-title fw-bold"><i class="bi bi-journal-plus me-2"></i>上传补习教材与考题 (Storage)</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="addMaterialForm" onsubmit="TuitionFirebaseApp.submitAddMaterial(event)">
+          <div class="modal-body p-4">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">资料标题 *</label>
+              <input type="text" id="matTitle" class="form-control" required placeholder="如: 2026版高二数学极值突破讲义.pdf">
+            </div>
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">所属科目 *</label>
+                <select id="matSubject" class="form-select" required>
+                  <option value="数学">数学</option>
+                  <option value="英语">英语</option>
+                  <option value="物理">物理</option>
+                  <option value="化学">化学</option>
+                  <option value="通用">通用</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label fw-semibold">资料分类</label>
+                <select id="matCategory" class="form-select">
+                  <option value="讲义">讲义</option>
+                  <option value="练习册">练习册</option>
+                  <option value="模拟卷">模拟卷</option>
+                  <option value="词汇手册">词汇手册</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-3 mt-3">
+              <label class="form-label fw-semibold">关联班级 (选填)</label>
+              <select id="matClassSelect" class="form-select">
+                <option value="">-- 全员通用资料 --</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">资料下载/云盘链接 *</label>
+              <input type="url" id="matFileUrl" class="form-control" required placeholder="https://example.com/materials/xxxx.pdf">
+            </div>
+          </div>
+          <div class="modal-footer bg-light py-2">
+            <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">取消</button>
+            <button type="submit" class="btn btn-info text-white rounded-pill px-4">确认上传</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Firebase v10 JS Modules -->
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="tuition_firebase.js"></script>
+</body>
+</html>
